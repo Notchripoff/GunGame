@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knight Shooter Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #444;
+        }
+        canvas {
+            display: block;
+            background: #111;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Load images
+        const knightImg = new Image();
+        knightImg.src = 'image1.png'; // Replace with your knight image
+
+        const enemyImg = new Image();
+        enemyImg.src = 'enemy.png'; // Replace with your enemy image
+
+        const knight = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            size: 30,
+            speed: 5,
+            dx: 0,
+            dy: 0
+        };
+
+        let projectiles = [];
+        const projectileSpeed = 8;
+        const projectileRadius = 5;
+
+        let enemies = [];
+        const enemySize = 40;
+        const enemySpeed = 2;
+        const enemyCount = 5;
+
+        function createEnemies() {
+            for (let i = 0; i < enemyCount; i++) {
+                enemies.push({
+                    x: Math.random() * (canvas.width - enemySize),
+                    y: Math.random() * (canvas.height - enemySize),
+                    size: enemySize,
+                    dx: Math.random() * 2 - 1, // Random direction
+                    dy: Math.random() * 2 - 1, // Random direction
+                });
+            }
+        }
+
+        function drawKnight() {
+            ctx.drawImage(knightImg, knight.x - knight.size / 2, knight.y - knight.size / 2, knight.size, knight.size);
+        }
+
+        function drawProjectiles() {
+            ctx.fillStyle = 'white';
+            projectiles.forEach(proj => {
+                ctx.beginPath();
+                ctx.arc(proj.x, proj.y, projectileRadius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawEnemies() {
+            enemies.forEach(enemy => {
+                ctx.drawImage(enemyImg, enemy.x - enemy.size / 2, enemy.y - enemy.size / 2, enemy.size, enemy.size);
+            });
+        }
+
+        function updateKnight() {
+            knight.x += knight.dx;
+            knight.y += knight.dy;
+
+            // Boundaries
+            if (knight.x < 0) knight.x = 0;
+            if (knight.y < 0) knight.y = 0;
+            if (knight.x > canvas.width) knight.x = canvas.width;
+            if (knight.y > canvas.height) knight.y = canvas.height;
+        }
+
+        function updateProjectiles() {
+            projectiles.forEach(proj => {
+                proj.x += proj.dx;
+                proj.y += proj.dy;
+            });
+
+            // Remove off-screen projectiles
+            projectiles = projectiles.filter(proj => proj.x > 0 && proj.x < canvas.width && proj.y > 0 && proj.y < canvas.height);
+
+            // Check for collisions
+            projectiles.forEach(proj => {
+                enemies.forEach((enemy, index) => {
+                    const dx = proj.x - enemy.x;
+                    const dy = proj.y - enemy.y;
+                    if (Math.sqrt(dx * dx + dy * dy) < projectileRadius + enemy.size / 2) {
+                        // Remove enemy and projectile on collision
+                        enemies.splice(index, 1);
+                        projectiles = projectiles.filter(p => p !== proj);
+                    }
+                });
+            });
+        }
+
+        function updateEnemies() {
+            enemies.forEach(enemy => {
+                const dx = knight.x - enemy.x;
+                const dy = knight.y - enemy.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                enemy.dx = (dx / distance) * enemySpeed;
+                enemy.dy = (dy / distance) * enemySpeed;
+                enemy.x += enemy.dx;
+                enemy.y += enemy.dy;
+
+                // Boundaries
+                if (enemy.x < 0) enemy.x = 0;
+                if (enemy.y < 0) enemy.y = 0;
+                if (enemy.x > canvas.width - enemy.size) enemy.x = canvas.width - enemy.size;
+                if (enemy.y > canvas.height - enemy.size) enemy.y = canvas.height - enemy.size;
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawKnight();
+            drawProjectiles();
+            drawEnemies();
+        }
+
+        function gameLoop() {
+            updateKnight();
+            updateProjectiles();
+            updateEnemies();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener('mousemove', e => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const angle = Math.atan2(mouseY - knight.y, mouseX - knight.x);
+            knight.dx = knight.speed * Math.cos(angle);
+            knight.dy = knight.speed * Math.sin(angle);
+        });
+
+        window.addEventListener('mousedown', () => {
+            shoot();
+        });
+
+        function shoot() {
+            const angle = Math.atan2(event.clientY - knight.y, event.clientX - knight.x);
+            const dx = projectileSpeed * Math.cos(angle);
+            const dy = projectileSpeed * Math.sin(angle);
+            projectiles.push({
+                x: knight.x,
+                y: knight.y,
+                dx: dx,
+                dy: dy
+            });
+        }
+
+        knightImg.onload = () => {
+            enemyImg.onload = () => {
+                createEnemies();
+                gameLoop();
+            };
+        };
+    </script>
+</body>
+</html>
+
+
